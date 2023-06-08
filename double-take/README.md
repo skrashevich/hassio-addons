@@ -1,6 +1,7 @@
 [![Double Take](https://badgen.net/github/release/skrashevich/double-take)](https://github.com/skrashevich/double-take) [![Double Take](https://badgen.net/github/stars/skrashevich/double-take)](https://github.com/skrashevich/double-take/stargazers) [![Docker Pulls](https://flat.badgen.net/docker/pulls/skrashevich/double-take)](https://hub.docker.com/r/skrashevich/double-take) 
 
 ![amd64][amd64-shield]
+![arm64][arm64-shield]
 
 # Double Take
 

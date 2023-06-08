@@ -1,1 +1,1 @@
-FROM ghcr.io/skrashevich/double-take:1.13.7
+FROM ghcr.io/skrashevich/double-take:1.13.8
