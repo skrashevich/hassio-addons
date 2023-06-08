@@ -1,0 +1,1 @@
+FROM codeproject/ai-server:2.1.9
