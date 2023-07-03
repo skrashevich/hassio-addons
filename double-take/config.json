@@ -31,5 +31,6 @@
     "CONFIG_PATH": "str",
     "SECRETS_PATH": "str",
     "MEDIA_PATH": "str"
-  }
+  },
+  "watchdog": "tcp://[HOST]:[PORT:3000]"
 }
