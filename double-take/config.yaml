@@ -1,0 +1,33 @@
+name: Double Take
+version: 1.13.10
+image: skrashevich/double-take
+url: https://github.com/skrashevich/double-take
+panel_icon: mdi:face-recognition
+slug: double-take
+description: Unified UI and API for processing and training images for facial recognition
+arch:
+  - amd64
+  - aarch64
+  - armv7
+startup: application
+boot: auto
+ingress: true
+tmpfs: true
+init: false
+full_access: false
+privileged:
+  - SYS_ADMIN
+ingress_port: 3000
+ports:
+  3000/tcp: 3000
+ports_description:
+  3000/tcp: Web interface (not required for Home Assistant ingress)
+map:
+  - media:rw
+  - config:rw
+environment:
+  HA_ADDON: 'true'
+  STORAGE_PATH: "/config/double-take"
+  CONFIG_PATH: "/config/double-take"
+  SECRETS_PATH: "/config/double-take"
+  MEDIA_PATH: "/media/double-take"
