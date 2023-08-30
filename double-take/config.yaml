@@ -1,5 +1,5 @@
 name: Double Take
-version: 1.13.11
+version: 1.13.11.1
 image: skrashevich/double-take
 url: https://github.com/skrashevich/double-take
 panel_icon: mdi:face-recognition
@@ -8,7 +8,6 @@ description: Unified UI and API for processing and training images for facial re
 arch:
   - amd64
   - aarch64
-  - armv7
 startup: application
 boot: auto
 ingress: true
@@ -26,7 +25,7 @@ map:
   - media:rw
   - config:rw
 environment:
-  HA_ADDON: 'true'
+  HA_ADDON: "true"
   STORAGE_PATH: "/config/double-take"
   CONFIG_PATH: "/config/double-take"
   SECRETS_PATH: "/config/double-take"
