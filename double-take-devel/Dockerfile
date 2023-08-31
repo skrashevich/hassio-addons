@@ -10,7 +10,7 @@ LABEL \
   io.hass.type="addon" \
   io.hass.arch="aarch64|amd64"
 
-COPY --chmod=755 <<EOT >/init.sh
+COPY --chmod=755 <<-EOT /init.sh
 #!/usr/bin/env bash
 set -e
 
