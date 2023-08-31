@@ -21,6 +21,3 @@ environment:
   HA_ADDON: 'true'
   DATA_DIR: "/config/ai-server/data"
   MODULES_PATH: "/config/ai-server/modules"
-schema:
-  CONFIG_PATH: str
-  MODULES_PATH: str
