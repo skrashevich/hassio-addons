@@ -1,4 +1,4 @@
-name: CodeProject AI.Server (CPU) x86_64
+name: CodeProject AI.Server (CPU)
 version: cpu-2.1.11
 url: https://hub.docker.com/r/codeproject/ai-server
 image: codeproject/ai-server
@@ -7,6 +7,7 @@ slug: ai-server
 description: standalone open-source AI server
 arch:
   - amd64
+  - aarch64
 startup: application
 boot: auto
 ingress: true

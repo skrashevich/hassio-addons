@@ -30,3 +30,13 @@ environment:
   CONFIG_PATH: "/config/double-take"
   SECRETS_PATH: "/config/double-take"
   MEDIA_PATH: "/media/double-take"
+options:
+  STORAGE_PATH: "/config/double-take"
+  CONFIG_PATH: "/config/double-take"
+  SECRETS_PATH: "/config/double-take"
+  MEDIA_PATH: "/media/double-take"
+schema:
+  STORAGE_PATH: str
+  CONFIG_PATH: str
+  SECRETS_PATH: str
+  MEDIA_PATH: str

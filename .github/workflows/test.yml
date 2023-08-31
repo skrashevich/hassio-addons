@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
         matrix:
-          target: ['ai.server']
+          target: ['ai.server', 'double-take']
         fail-fast: false
     steps:
       - name: Checkout the repository
