@@ -18,6 +18,7 @@ jobs:
         with:
           args: |
             --test \
-            --all \
+            --amd64 \
+            --aarch64 \
             --target ${{ matrix.target }} \
             --docker-hub ${{ secrets.DOCKER_USERNAME }}
