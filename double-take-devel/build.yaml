@@ -1,7 +1,0 @@
-build_from:
-  aarch64: skrashevich/double-take:beta
-  x86_64: skrashevich/double-take:beta
-squash: false
-args:
-  my_build_arg: cjhjrnsczxj,tpmzyd;jgec eyekb,fyfy
-  
