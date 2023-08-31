@@ -1,4 +1,4 @@
-## [1.13.11](https://github.com/skrashevich/double-take/compare/v1.13.11...v1.13.11.1)
+## [1.13.11.*](https://github.com/skrashevich/double-take/compare/v1.13.11...v1.13.11.2)
 
 * Bug fixes
 

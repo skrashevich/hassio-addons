@@ -1,5 +1,5 @@
 name: Double Take
-version: 1.13.11.1
+version: 1.13.11.2
 image: skrashevich/double-take
 url: https://github.com/skrashevich/double-take
 panel_icon: mdi:face-recognition
