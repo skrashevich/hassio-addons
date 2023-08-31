@@ -1,0 +1,23 @@
+name: "Test"
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Test build
+    runs-on: ubuntu-latest
+    strategy:
+        matrix:
+          target: ['ai.server']
+        fail-fast: false
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+      - name: Test build
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            --test \
+            --all \
+            --target ${{ matrix.target }} \
+            --docker-hub ${{ secrets.DOCKER_USERNAME }}
