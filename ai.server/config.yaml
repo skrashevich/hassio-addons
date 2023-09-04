@@ -1,12 +1,13 @@
 name: CodeProject AI.Server (CPU) x86_64
-version: cpu-2.1.11
+version: 2.1.11
 url: https://hub.docker.com/r/codeproject/ai-server
-image: codeproject/ai-server
+image: ghcr.io/skrashevich/hassio-addon-ai.server-{arch}
 panel_icon: mdi:face-recognition
 slug: ai-server
 description: standalone open-source AI server
 arch:
   - amd64
+  - aarch64
 startup: application
 boot: auto
 ingress: true
