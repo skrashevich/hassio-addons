@@ -1,3 +1,9 @@
+## [1.13.11.3](https://github.com/skrashevich/double-take/compare/v1.13.11.2...v1.13.11.3)
+
+### Bug Fixes
+
+* [BUG] Unable to delete images from Train Menu #102
+
 ## [1.13.11.*](https://github.com/skrashevich/double-take/compare/v1.13.11...v1.13.11.2)
 
 * Bug fixes

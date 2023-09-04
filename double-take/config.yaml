@@ -1,5 +1,5 @@
 name: Double Take
-version: 1.13.11.2
+version: 1.13.11.3
 image: ghcr.io/skrashevich/hassio-addon-double-take-{arch}
 url: https://github.com/skrashevich/double-take
 panel_icon: mdi:face-recognition
