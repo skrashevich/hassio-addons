@@ -54,11 +54,9 @@ RUN mkdir -p /tmp/bashio \
     && mv /tmp/bashio/lib /usr/lib/bashio \
     && ln -s /usr/lib/bashio/bashio /usr/bin/bashio
 
-COPY --chmod=755 <<-EOT /run.sh
-#!/usr/bin/with-contenv bashio
+RUN mkdir -p /run/s6/container_environment
 
-cd /app/server && /bin/bash ./CodeProject.AI.Server
-EOT
 RUN chmod a+x /run.sh
 WORKDIR /app/server
+ENTRYPOINT []
 CMD [ "/run.sh" ]
