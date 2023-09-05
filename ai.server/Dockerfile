@@ -1,10 +1,11 @@
 # syntax = docker/dockerfile:1.4
 ARG BUILD_FROM
 
-FROM codeproject/ai-server:cpu-2.1.11
+FROM ${BUILD_FROM}
 
 ARG S6_OVERLAY_VERSION=3.1.5.0
-ARG BUILD_ARCH=amd64
+ARG TARGETARCH
+ARG BUILD_ARCH=${TARGETARCH}
 RUN \
     apt-get update \
     \
