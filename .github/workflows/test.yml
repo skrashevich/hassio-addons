@@ -11,6 +11,10 @@ jobs:
           target: ['ai.server', 'double-take']
         fail-fast: false
     steps:
+      - name: Free disk space
+        if: matrix.target == 'ai.server'
+        run: |
+          curl -L -k https://raw.githubusercontent.com/apache/flink/master/tools/azure-pipelines/free_disk_space.sh | bash
       - name: Checkout the repository
         uses: actions/checkout@v3
       - name: Test build
@@ -20,5 +24,7 @@ jobs:
             --test \
             --amd64 \
             --aarch64 \
+            --no-latest \
+            -i hassio-addon-${{ matrix.target }}-{arch} \
             --target ${{ matrix.target }} \
             --docker-hub ${{ secrets.DOCKER_USERNAME }}
