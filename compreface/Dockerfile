@@ -1,3 +1,5 @@
+# syntax = docker/dockerfile:1.4
+
 FROM exadel/compreface:1.2.0
 ENV PGDATA=/data/database
 RUN apt-get update && apt-get install jq -y && rm -rf /var/lib/apt/lists/*
