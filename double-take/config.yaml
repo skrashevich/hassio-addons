@@ -1,5 +1,5 @@
 name: Double Take
-version: 1.13.11.3
+version: 1.13.11.4
 image: ghcr.io/skrashevich/hassio-addon-double-take-{arch}
 url: https://github.com/skrashevich/double-take
 panel_icon: mdi:face-recognition
@@ -30,13 +30,16 @@ environment:
   CONFIG_PATH: "/config/double-take"
   SECRETS_PATH: "/config/double-take"
   MEDIA_PATH: "/media/double-take"
+  IPFILTER: true
 options:
   STORAGE_PATH: "/config/double-take"
   CONFIG_PATH: "/config/double-take"
   SECRETS_PATH: "/config/double-take"
   MEDIA_PATH: "/media/double-take"
+  IPFILTER: true
 schema:
   STORAGE_PATH: str
   CONFIG_PATH: str
   SECRETS_PATH: str
   MEDIA_PATH: str
+  IPFILTER: bool
