@@ -1,7 +1,7 @@
 name: Double Take
 version: 1.13.11.4
 image: ghcr.io/skrashevich/hassio-addon-double-take-{arch}
-url: https://github.com/skrashevich/double-take
+url: https://double-take.site/redirect.php?location=github
 panel_icon: mdi:face-recognition
 slug: double-take
 description: Unified UI and API for processing and training images for facial recognition
