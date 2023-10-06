@@ -30,7 +30,7 @@ environment:
   CONFIG_PATH: "/config/double-take"
   SECRETS_PATH: "/config/double-take"
   MEDIA_PATH: "/media/double-take"
-  IPFILTER: true
+  IPFILTER: "true"
 options:
   STORAGE_PATH: "/config/double-take"
   CONFIG_PATH: "/config/double-take"
