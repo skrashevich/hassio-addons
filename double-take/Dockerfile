@@ -60,7 +60,7 @@ export STORAGE_PATH=$(bashio::config 'STORAGE_PATH')
 export CONFIG_PATH=$(bashio::config 'CONFIG_PATH')
 export SECRETS_PATH=$(bashio::config 'SECRETS_PATH')
 export MEDIA_PATH=$(bashio::config 'MEDIA_PATH')
-export IPFILTER=$(bashio::config 'IPFILTER')
+export IPFILTER=$(cat /data/options.json | jq '.IPFILTER')
 
 cd /double-take && /bin/bash ./entrypoint.sh
 EOT
