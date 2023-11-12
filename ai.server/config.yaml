@@ -12,7 +12,11 @@ startup: application
 boot: auto
 init: false
 full_access: false
+usb: true
+video: true
 ingress: false
+privileged:
+  - PERFMON
 ports:
   5000/tcp: 5000
 ports_description:
