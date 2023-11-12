@@ -11,9 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
         matrix:
-          target: ['ai.server', 'double-take', 'double-take-devel']
+          target: ['ai.server', 'double-take']
         fail-fast: false
     steps:
+      - name: Free disk space
+        if: matrix.target == 'ai.server'
+        run: |
+          curl -L -k https://raw.githubusercontent.com/apache/flink/master/tools/azure-pipelines/free_disk_space.sh | bash
       - name: Checkout the repository
         uses: actions/checkout@v3
       - name: Login to GHCR

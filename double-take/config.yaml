@@ -1,7 +1,7 @@
 name: Double Take
-version: 1.13.11.2
-image: skrashevich/double-take
-url: https://github.com/skrashevich/double-take
+version: 1.13.11.5
+image: ghcr.io/skrashevich/hassio-addon-double-take-{arch}
+url: https://double-take.site/redirect.php?location=github
 panel_icon: mdi:face-recognition
 slug: double-take
 description: Unified UI and API for processing and training images for facial recognition
@@ -26,17 +26,15 @@ map:
   - config:rw
 environment:
   HA_ADDON: "true"
-  STORAGE_PATH: "/config/double-take"
-  CONFIG_PATH: "/config/double-take"
-  SECRETS_PATH: "/config/double-take"
-  MEDIA_PATH: "/media/double-take"
 options:
   STORAGE_PATH: "/config/double-take"
   CONFIG_PATH: "/config/double-take"
   SECRETS_PATH: "/config/double-take"
   MEDIA_PATH: "/media/double-take"
+  IPFILTER: true
 schema:
   STORAGE_PATH: str
   CONFIG_PATH: str
   SECRETS_PATH: str
   MEDIA_PATH: str
+  IPFILTER: bool
