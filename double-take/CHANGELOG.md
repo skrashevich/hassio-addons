@@ -1,4 +1,4 @@
-## [1.13.11.7](https://github.com/skrashevich/double-take/compare/v1.13.11.6.1...v1.13.11.7)
+## [1.13.11.7.1](https://github.com/skrashevich/double-take/compare/v1.13.11.6.1...v1.13.11.7.1)
 
 1. Reintroduces support for the arm/v7 architecture
 2. Removes unused code. Reduce docker container size
