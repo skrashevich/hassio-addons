@@ -1,9 +1,9 @@
 # syntax = docker/dockerfile:1.4
 ARG BUILD_FROM
 
-FROM skrashevich/double-take:1.13.11.6.1
+FROM skrashevich/double-take:1.13.11.7
 
-ARG S6_OVERLAY_VERSION=3.1.5.0
+ARG S6_OVERLAY_VERSION=3.1.6.0
 ARG BUILD_ARCH=amd64
 RUN \
     apt-get update \
@@ -40,9 +40,9 @@ ADD --link rootfs /
 
 ENV CONFIG_PATH=/data/options.json
 LABEL \
-  io.hass.version="1.13.11.6.1" \
+  io.hass.version="1.13.11.7" \
   io.hass.type="addon" \
-  io.hass.arch="aarch64|amd64"
+  io.hass.arch="aarch64|amd64|armv7"
 
 ADD --link https://github.com/hassio-addons/bashio/archive/v0.14.3.tar.gz /tmp/bashio.tar.gz
 RUN mkdir -p /tmp/bashio \
