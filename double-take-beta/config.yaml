@@ -1,10 +1,10 @@
-name: Double Take
-version: 1.13.11.8
-image: ghcr.io/skrashevich/hassio-addon-double-take-{arch}
+name: Double Take (Release Candidate)
+version: 1.13.11.9rc0
+image: ghcr.io/skrashevich/hassio-addon-double-take-beta-{arch}
 url: https://double-take.site/redirect.php?location=github
 panel_icon: mdi:face-recognition
-slug: double-take
-description: Unified UI and API for processing and training images for facial recognition
+slug: double-take-beta
+description: BETA VERSION of Unified UI and API for processing and training images for facial recognition
 arch:
   - amd64
   - aarch64

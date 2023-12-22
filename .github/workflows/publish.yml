@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
         matrix:
-          target: ['ai.server', 'double-take']
+          target: ['ai.server', 'double-take', 'double-take-beta']
         fail-fast: false
     steps:
       - name: Free disk space

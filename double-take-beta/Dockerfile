@@ -1,11 +1,10 @@
 # syntax = docker/dockerfile:1.4
 ARG BUILD_FROM
 
-FROM ${BUILD_FROM}
+FROM skrashevich/double-take:1.13.11.9rc0
 
-ARG S6_OVERLAY_VERSION=3.1.5.0
-ARG TARGETARCH
-ARG BUILD_ARCH=${TARGETARCH}
+ARG S6_OVERLAY_VERSION=3.1.6.0
+ARG BUILD_ARCH=amd64
 RUN \
     apt-get update \
     \
@@ -41,9 +40,9 @@ ADD --link rootfs /
 
 ENV CONFIG_PATH=/data/options.json
 LABEL \
-  io.hass.version="2.4.6" \
+  io.hass.version="1.13.11.9rc0" \
   io.hass.type="addon" \
-  io.hass.arch="aarch64|amd64"
+  io.hass.arch="aarch64|amd64|armv7"
 
 ADD --link https://github.com/hassio-addons/bashio/archive/v0.14.3.tar.gz /tmp/bashio.tar.gz
 RUN mkdir -p /tmp/bashio \
@@ -54,9 +53,17 @@ RUN mkdir -p /tmp/bashio \
     && mv /tmp/bashio/lib /usr/lib/bashio \
     && ln -s /usr/lib/bashio/bashio /usr/bin/bashio
 
-RUN mkdir -p /run/s6/container_environment
+COPY --chmod=755 <<-EOT /run.sh
+#!/usr/bin/with-contenv bashio
 
+export STORAGE_PATH=$(bashio::config 'STORAGE_PATH')
+export CONFIG_PATH=$(bashio::config 'CONFIG_PATH')
+export SECRETS_PATH=$(bashio::config 'SECRETS_PATH')
+export MEDIA_PATH=$(bashio::config 'MEDIA_PATH')
+export IPFILTER=$(cat /data/options.json | jq '.IPFILTER')
+
+cd /double-take && /bin/bash ./entrypoint.sh
+EOT
 RUN chmod a+x /run.sh
-WORKDIR /app/server
-ENTRYPOINT []
+WORKDIR /double-take
 CMD [ "/run.sh" ]
