@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:1.4
 ARG BUILD_FROM
 
-FROM skrashevich/double-take:1.13.11.9rc0
+FROM skrashevich/double-take:1.13.11.9rc1
 
 ARG S6_OVERLAY_VERSION=3.1.6.0
 ARG BUILD_ARCH=amd64
@@ -40,7 +40,7 @@ ADD --link rootfs /
 
 ENV CONFIG_PATH=/data/options.json
 LABEL \
-  io.hass.version="1.13.11.9rc0" \
+  io.hass.version="1.13.11.9rc1" \
   io.hass.type="addon" \
   io.hass.arch="aarch64|amd64|armv7"
 
