@@ -61,6 +61,9 @@ export CONFIG_PATH=$(bashio::config 'CONFIG_PATH')
 export SECRETS_PATH=$(bashio::config 'SECRETS_PATH')
 export MEDIA_PATH=$(bashio::config 'MEDIA_PATH')
 export IPFILTER=$(cat /data/options.json | jq '.IPFILTER')
+export MQTT_HOST=$(bashio::services mqtt "host")
+export MQTT_USER=$(bashio::services mqtt "username")
+export MQTT_PASSWORD=$(bashio::services mqtt "password")
 
 cd /double-take && /bin/bash ./entrypoint.sh
 EOT
