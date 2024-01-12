@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:1.4
 ARG BUILD_FROM
 
-FROM skrashevich/double-take:1.13.11.9rc1
+FROM skrashevich/double-take:1.13.11.9rc2
 
 ARG S6_OVERLAY_VERSION=3.1.6.0
 ARG BUILD_ARCH=amd64
@@ -40,7 +40,7 @@ ADD --link rootfs /
 
 ENV CONFIG_PATH=/data/options.json
 LABEL \
-  io.hass.version="1.13.11.9rc1" \
+  io.hass.version="1.13.11.9rc2" \
   io.hass.type="addon" \
   io.hass.arch="aarch64|amd64|armv7"
 
@@ -61,6 +61,9 @@ export CONFIG_PATH=$(bashio::config 'CONFIG_PATH')
 export SECRETS_PATH=$(bashio::config 'SECRETS_PATH')
 export MEDIA_PATH=$(bashio::config 'MEDIA_PATH')
 export IPFILTER=$(cat /data/options.json | jq '.IPFILTER')
+export MQTT_HOST=$(bashio::services mqtt "host")
+export MQTT_USER=$(bashio::services mqtt "username")
+export MQTT_PASSWORD=$(bashio::services mqtt "password")
 
 cd /double-take && /bin/bash ./entrypoint.sh
 EOT

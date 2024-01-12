@@ -1,3 +1,1 @@
-** ATTENTION **
-
-You may need to reinstall the face processing and object detection modules through the AI.Server web interface after this upgrade.
+You may need to reinstall some modules through the AI.Server web interface after upgrade.
