@@ -4,7 +4,7 @@
 
 
 
-Or, in your Home Assistant, navigate to _Configuration_ > _Add-ons, Backups & Supervisor_ > _Add-on Store_ > _..._ > _Repositories_ and add `[https://github.com/skrashevich/hassio-addons](https://github.com/BertilJ/hassio-addons)` to the list.
+Or, in your Home Assistant, navigate to _Configuration_ > _Add-ons, Backups & Supervisor_ > _Add-on Store_ > _..._ > _Repositories_ and add (https://github.com/BertilJ/hassio-addons) to the list.
 
 ## Add-ons provided by this repository
 
