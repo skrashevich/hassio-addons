@@ -1,0 +1,53 @@
+#!/usr/bin/with-contenv bashio
+set -euo pipefail
+
+CONFIG_PATH="/data/options.json"
+
+PORT="$(jq --raw-output '.port // 9000' "${CONFIG_PATH}")"
+DB_PATH="$(jq --raw-output '.db_path // "/config/shelley/shelley.db"' "${CONFIG_PATH}")"
+USER_CONFIG_PATH="$(jq --raw-output '.config_path // empty' "${CONFIG_PATH}")"
+DEFAULT_MODEL="$(jq --raw-output '.default_model // empty' "${CONFIG_PATH}")"
+WORKING_DIR="$(jq --raw-output '.working_dir // "/config"' "${CONFIG_PATH}")"
+REQUIRE_HEADER="$(jq --raw-output '.require_header // empty' "${CONFIG_PATH}")"
+DEBUG="$(jq --raw-output '.debug // false' "${CONFIG_PATH}")"
+
+ANTHROPIC_API_KEY="$(jq --raw-output '.anthropic_api_key // empty' "${CONFIG_PATH}")"
+OPENAI_API_KEY="$(jq --raw-output '.openai_api_key // empty' "${CONFIG_PATH}")"
+GEMINI_API_KEY="$(jq --raw-output '.gemini_api_key // empty' "${CONFIG_PATH}")"
+FIREWORKS_API_KEY="$(jq --raw-output '.fireworks_api_key // empty' "${CONFIG_PATH}")"
+
+mkdir -p "$(dirname "${DB_PATH}")"
+mkdir -p "${WORKING_DIR}"
+cd "${WORKING_DIR}"
+
+if [[ -n "${ANTHROPIC_API_KEY}" ]]; then
+  export ANTHROPIC_API_KEY
+fi
+if [[ -n "${OPENAI_API_KEY}" ]]; then
+  export OPENAI_API_KEY
+fi
+if [[ -n "${GEMINI_API_KEY}" ]]; then
+  export GEMINI_API_KEY
+fi
+if [[ -n "${FIREWORKS_API_KEY}" ]]; then
+  export FIREWORKS_API_KEY
+fi
+
+ARGS=(--db "${DB_PATH}")
+if [[ "${DEBUG}" == "true" ]]; then
+  ARGS+=(--debug)
+fi
+if [[ -n "${USER_CONFIG_PATH}" ]]; then
+  ARGS+=(--config "${USER_CONFIG_PATH}")
+fi
+if [[ -n "${DEFAULT_MODEL}" ]]; then
+  ARGS+=(--default-model "${DEFAULT_MODEL}")
+fi
+
+ARGS+=(serve --port "${PORT}")
+if [[ -n "${REQUIRE_HEADER}" ]]; then
+  ARGS+=(--require-header "${REQUIRE_HEADER}")
+fi
+
+exec /usr/bin/shelley "${ARGS[@]}"
+

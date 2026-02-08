@@ -1,0 +1,56 @@
+name: Shelley
+version: 0.188.951060362
+slug: shelley
+description: Web-based coding agent for managing Home Assistant
+url: https://github.com/boldsoftware/shelley
+image: ghcr.io/skrashevich/hassio-addon-shelley-{arch}
+panel_icon: mdi:robot
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+init: false
+ingress: true
+ingress_port: 9000
+hassio_api: true
+homeassistant_api: true
+docker_api: true
+full_access: true
+ports:
+  9000/tcp: 9000
+ports_description:
+  9000/tcp: Web interface (optional when using ingress)
+map:
+  - addons:rw
+  - all_addon_configs:rw
+  - backup:rw
+  - config:rw
+  - media:rw
+  - share:rw
+  - ssl:rw
+options:
+  port: 9000
+  db_path: /config/shelley/shelley.db
+  config_path: ""
+  default_model: ""
+  working_dir: /config
+  debug: false
+  require_header: ""
+  anthropic_api_key: ""
+  openai_api_key: ""
+  gemini_api_key: ""
+  fireworks_api_key: ""
+schema:
+  port: port
+  db_path: str
+  config_path: str?
+  default_model: str?
+  working_dir: str
+  debug: bool
+  require_header: str?
+  anthropic_api_key: password?
+  openai_api_key: password?
+  gemini_api_key: password?
+  fireworks_api_key: password?
+
