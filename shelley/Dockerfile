@@ -1,9 +1,36 @@
 # syntax = docker/dockerfile:1.4
 ARG BUILD_FROM
-FROM ${BUILD_FROM}
 
-ARG SHELLEY_VERSION=v0.188.951060362
+# Stage 1: Build shelley from source
+FROM golang:1.25-alpine AS builder
+
+RUN apk add --no-cache git nodejs npm tar
+RUN npm install -g pnpm
+
 ARG BUILD_ARCH
+ARG SHELLEY_REPO=https://github.com/skrashevich/shelley.git
+ARG SHELLEY_BRANCH=main
+
+RUN git clone --depth 1 --branch ${SHELLEY_BRANCH} ${SHELLEY_REPO} /src
+WORKDIR /src
+
+RUN cd ui && pnpm install --frozen-lockfile --silent && pnpm run --silent build
+
+RUN for dir in templates/*/; do \
+        name=$(basename "$dir"); \
+        tar -czf "templates/$name.tar.gz" -C "templates/$name" --exclude='.DS_Store' .; \
+    done
+
+RUN set -eux; \
+    case "${BUILD_ARCH}" in \
+      amd64) export GOARCH=amd64 ;; \
+      aarch64) export GOARCH=arm64 ;; \
+      *) echo "Unsupported architecture: ${BUILD_ARCH}" && exit 1 ;; \
+    esac; \
+    CGO_ENABLED=0 GOOS=linux go build -o /usr/bin/shelley ./cmd/shelley
+
+# Stage 2: Final image
+FROM ${BUILD_FROM}
 
 RUN apk add --no-cache \
     bash \
@@ -16,14 +43,7 @@ RUN apk add --no-cache \
     openssh-client \
     sqlite
 
-RUN set -eux; \
-    case "${BUILD_ARCH}" in \
-      amd64) SHELLEY_ARCH="amd64" ;; \
-      aarch64) SHELLEY_ARCH="arm64" ;; \
-      *) echo "Unsupported architecture: ${BUILD_ARCH}" && exit 1 ;; \
-    esac; \
-    curl -fsSL -o /usr/bin/shelley "https://github.com/boldsoftware/shelley/releases/download/${SHELLEY_VERSION}/shelley_linux_${SHELLEY_ARCH}"; \
-    chmod +x /usr/bin/shelley
+COPY --from=builder /usr/bin/shelley /usr/bin/shelley
 
 ADD --link https://github.com/hassio-addons/bashio/archive/v0.16.3.tar.gz /tmp/bashio.tar.gz
 RUN mkdir -p /tmp/bashio \
