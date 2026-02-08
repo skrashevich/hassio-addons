@@ -22,6 +22,7 @@ port: 9000
 db_path: /config/shelley/shelley.db
 config_path: /config/shelley/shelley.json
 default_model: ""
+system_prompt: ""
 working_dir: /config
 debug: false
 require_header: ""
@@ -34,6 +35,6 @@ fireworks_api_key: ""
 Notes:
 
 - `config_path` points to Shelley `shelley.json` config (optional).
+- `system_prompt` overrides Shelley system prompt instructions for new conversations.
 - `working_dir` is where shell and git operations start.
 - API keys are optional but needed for cloud LLM providers.
-

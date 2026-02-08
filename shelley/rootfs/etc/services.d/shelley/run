@@ -7,6 +7,7 @@ PORT="$(jq --raw-output '.port // 9000' "${CONFIG_PATH}")"
 DB_PATH="$(jq --raw-output '.db_path // "/config/shelley/shelley.db"' "${CONFIG_PATH}")"
 USER_CONFIG_PATH="$(jq --raw-output '.config_path // empty' "${CONFIG_PATH}")"
 DEFAULT_MODEL="$(jq --raw-output '.default_model // empty' "${CONFIG_PATH}")"
+SYSTEM_PROMPT="$(jq --raw-output '.system_prompt // empty' "${CONFIG_PATH}")"
 WORKING_DIR="$(jq --raw-output '.working_dir // "/config"' "${CONFIG_PATH}")"
 REQUIRE_HEADER="$(jq --raw-output '.require_header // empty' "${CONFIG_PATH}")"
 DEBUG="$(jq --raw-output '.debug // false' "${CONFIG_PATH}")"
@@ -19,6 +20,16 @@ FIREWORKS_API_KEY="$(jq --raw-output '.fireworks_api_key // empty' "${CONFIG_PAT
 mkdir -p "$(dirname "${DB_PATH}")"
 mkdir -p "${WORKING_DIR}"
 cd "${WORKING_DIR}"
+
+USER_AGENTS_PATH="/root/.config/shelley/AGENTS.md"
+if [[ -n "${SYSTEM_PROMPT}" ]]; then
+  mkdir -p "$(dirname "${USER_AGENTS_PATH}")"
+  cat > "${USER_AGENTS_PATH}" <<EOF
+${SYSTEM_PROMPT}
+EOF
+else
+  rm -f "${USER_AGENTS_PATH}"
+fi
 
 if [[ -n "${ANTHROPIC_API_KEY}" ]]; then
   export ANTHROPIC_API_KEY
@@ -50,4 +61,3 @@ if [[ -n "${REQUIRE_HEADER}" ]]; then
 fi
 
 exec /usr/bin/shelley "${ARGS[@]}"
-

@@ -30,8 +30,8 @@ RUN mkdir -p /tmp/bashio \
     && tar zxvf \
         /tmp/bashio.tar.gz \
         --strip 1 -C /tmp/bashio \
+    && rm -rf /usr/lib/bashio \
     && mv /tmp/bashio/lib /usr/lib/bashio \
-    && ln -s /usr/lib/bashio/bashio /usr/bin/bashio
+    && ln -sf /usr/lib/bashio/bashio /usr/bin/bashio
 
 COPY rootfs /
-

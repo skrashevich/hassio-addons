@@ -1,5 +1,5 @@
 name: Shelley
-version: 0.188.951060362
+version: 0.188.951060362-1
 slug: shelley
 description: Web-based coding agent for managing Home Assistant
 url: https://github.com/boldsoftware/shelley
@@ -34,6 +34,7 @@ options:
   db_path: /config/shelley/shelley.db
   config_path: ""
   default_model: ""
+  system_prompt: ""
   working_dir: /config
   debug: false
   require_header: ""
@@ -46,6 +47,7 @@ schema:
   db_path: str
   config_path: str?
   default_model: str?
+  system_prompt: str?
   working_dir: str
   debug: bool
   require_header: str?
@@ -53,4 +55,3 @@ schema:
   openai_api_key: password?
   gemini_api_key: password?
   fireworks_api_key: password?
-
