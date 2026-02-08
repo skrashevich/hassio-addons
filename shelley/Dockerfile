@@ -2,7 +2,7 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-ARG SHELLEY_VERSION=v0.188.951060362
+ARG SHELLEY_VERSION=v0.191.943231544
 ARG BUILD_ARCH
 
 RUN apk add --no-cache \
@@ -14,7 +14,10 @@ RUN apk add --no-cache \
     jq \
     lsof \
     openssh-client \
-    sqlite
+    sqlite \
+    nodejs \
+    python3 \
+    yq
 
 RUN set -eux; \
     case "${BUILD_ARCH}" in \
@@ -22,7 +25,7 @@ RUN set -eux; \
       aarch64) SHELLEY_ARCH="arm64" ;; \
       *) echo "Unsupported architecture: ${BUILD_ARCH}" && exit 1 ;; \
     esac; \
-    curl -fsSL -o /usr/bin/shelley "https://github.com/boldsoftware/shelley/releases/download/${SHELLEY_VERSION}/shelley_linux_${SHELLEY_ARCH}"; \
+    curl -fsSL -o /usr/bin/shelley "https://github.com/skrashevich/shelley/releases/download/${SHELLEY_VERSION}/shelley_linux_${SHELLEY_ARCH}"; \
     chmod +x /usr/bin/shelley
 
 ADD --link https://github.com/hassio-addons/bashio/archive/v0.16.3.tar.gz /tmp/bashio.tar.gz

@@ -1,8 +1,8 @@
 name: Shelley
-version: 0.188.951060362-1
+version: 0.191.943231544
 slug: shelley
 description: Web-based coding agent for managing Home Assistant
-url: https://github.com/boldsoftware/shelley
+url: https://github.com/skrashevich/shelley
 image: ghcr.io/skrashevich/hassio-addon-shelley-{arch}
 panel_icon: mdi:robot
 arch:
