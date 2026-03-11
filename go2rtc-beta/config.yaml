@@ -1,0 +1,33 @@
+name: go2rtc (Beta)
+version: "beta"
+url: https://github.com/skrashevich/go2rtc
+description: Ultimate camera streaming application with support RTSP, WebRTC, HomeKit, FFmpeg, RTMP, etc. (Beta branch)
+panel_icon: mdi:cctv
+slug: go2rtc-beta
+arch:
+  - amd64
+  - aarch64
+  - armv7
+startup: application
+boot: auto
+ingress: true
+ingress_port: 1984
+init: false
+full_access: false
+ports:
+  1984/tcp: 1984
+  8554/tcp: 8554
+  8555/tcp: 8555
+  8555/udp: 8555
+ports_description:
+  1984/tcp: go2rtc WebUI / HTTP API
+  8554/tcp: RTSP server
+  8555/tcp: WebRTC / PCMU+PCMA TCP
+  8555/udp: WebRTC / PCMU+PCMA UDP
+map:
+  - config:rw
+options:
+  log_level: info
+schema:
+  log_level: list(trace|debug|info|warn|error)
+image: ghcr.io/skrashevich/hassio-addon-go2rtc-beta-{arch}
