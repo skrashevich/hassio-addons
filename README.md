@@ -1,5 +1,11 @@
 # svk's Add-ons repository
 
+<!-- badges:start -->
+[![GitHub stars](https://img.shields.io/github/stars/skrashevich/hassio-addons?style=flat-square)](https://github.com/skrashevich/hassio-addons/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/skrashevich/hassio-addons?style=flat-square)](https://github.com/skrashevich/hassio-addons/commits/main)
+<!-- badges:end -->
+
+
 ## Installing
 
 Click on the button below:
