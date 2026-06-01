@@ -1,0 +1,23 @@
+#!/usr/bin/with-contenv bashio
+# Runs beside BotMux; survives BotMux restarts during auto-configuration.
+set -euo pipefail
+
+CONFIG_PATH="/data/options.json"
+AUTO="$(jq --raw-output '.homeassistant_auto_configure // true' "${CONFIG_PATH}")"
+
+if [[ "${AUTO}" != "true" ]]; then
+  exec sleep infinity
+fi
+
+bashio::log.info "homeassistant-setup: waiting to configure telegram_bot (polling via BotMux)"
+
+for attempt in $(seq 1 60); do
+  if /usr/local/bin/configure-homeassistant-integration; then
+    bashio::log.info "homeassistant-setup: configuration finished"
+    break
+  fi
+  bashio::log.notice "homeassistant-setup: retry ${attempt}/60 in 15s"
+  sleep 15
+done
+
+exec sleep infinity

@@ -1,0 +1,34 @@
+name: BotMux
+version: 0.1.12
+slug: botmux
+description: Telegram bot command center with reverse proxy for Home Assistant
+url: https://github.com/skrashevich/botmux
+panel_icon: mdi:robot-happy
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+init: false
+ingress: true
+ingress_port: 8080
+homeassistant_api: true
+map:
+  - config:rw
+  - homeassistant_config:ro
+ports:
+  8080/tcp: 8080
+ports_description:
+  8080/tcp: Web UI (optional when using ingress)
+options:
+  port: 8080
+  db_path: /config/botmux/botdata.db
+  telegram_bot_token: ""
+  demo_mode: false
+  homeassistant_auto_configure: true
+schema:
+  port: port
+  db_path: str
+  telegram_bot_token: password?
+  demo_mode: bool
+  homeassistant_auto_configure: bool

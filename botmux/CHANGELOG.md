@@ -1,0 +1,1 @@
+- Initial Home Assistant add-on packaging for BotMux v0.1.6.

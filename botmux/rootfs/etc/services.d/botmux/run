@@ -1,0 +1,54 @@
+#!/usr/bin/with-contenv bashio
+set -euo pipefail
+
+CONFIG_PATH="/data/options.json"
+BOTMUX_INTERNAL_PORT=8090
+
+PORT="$(jq --raw-output '.port // 8080' "${CONFIG_PATH}")"
+DB_PATH="$(jq --raw-output '.db_path // "/config/botmux/botdata.db"' "${CONFIG_PATH}")"
+DEMO_MODE="$(jq --raw-output '.demo_mode // false' "${CONFIG_PATH}")"
+AUTO="$(jq --raw-output '.homeassistant_auto_configure // true' "${CONFIG_PATH}")"
+
+# shellcheck source=/usr/local/bin/botmux-resolve-token.sh
+source /usr/local/bin/botmux-resolve-token.sh
+
+mkdir -p "$(dirname "${DB_PATH}")"
+
+if [[ "${DEMO_MODE}" == "true" ]]; then
+  botmux_resolve_telegram_token "${CONFIG_PATH}" 1 || true
+elif [[ -n "$(jq --raw-output '.telegram_bot_token // empty' "${CONFIG_PATH}")" ]]; then
+  botmux_resolve_telegram_token "${CONFIG_PATH}" 1 || true
+elif [[ "${AUTO}" == "true" ]]; then
+  if ! botmux_resolve_telegram_token "${CONFIG_PATH}" 120; then
+    bashio::log.error "Could not resolve telegram_bot token from add-on options or Home Assistant"
+    exit 1
+  fi
+else
+  botmux_resolve_telegram_token "${CONFIG_PATH}" 12 || true
+fi
+
+ARGS=(-addr ":${BOTMUX_INTERNAL_PORT}" -db "${DB_PATH}")
+
+if [[ "${DEMO_MODE}" == "true" ]]; then
+  export DEMO_MODE=true
+fi
+
+if [[ -n "${TOKEN}" ]]; then
+  export TELEGRAM_BOT_TOKEN="${TOKEN}"
+  export BOTMUX_ALLOW_AUTO_REGISTER=1
+  if [[ "${AUTO}" == "true" ]]; then
+    /usr/local/bin/configure-homeassistant-integration prepare-before-poll || true
+  fi
+else
+  bashio::log.warning "Starting BotMux without Telegram token (manual setup via Web UI)"
+fi
+
+bashio::log.info "BotMux listening on port ${BOTMUX_INTERNAL_PORT} (nginx ingress on ${PORT})"
+bashio::log.info "Database: ${DB_PATH}"
+if [[ -n "${TOKEN}" ]]; then
+  bashio::log.info "Telegram token (${TOKEN_SOURCE:-unknown}); BotMux polls api.telegram.org"
+  ADDON_HOST="$(bashio::addon.hostname 2>/dev/null || echo "botmux")"
+  bashio::log.info "Home Assistant (auto): polling via http://${ADDON_HOST}:${PORT}/tgapi"
+fi
+
+exec /usr/bin/botmux "${ARGS[@]}"

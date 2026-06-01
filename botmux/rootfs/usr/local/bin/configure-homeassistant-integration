@@ -1,0 +1,528 @@
+#!/usr/bin/with-contenv bashio
+# Fully automatic: BotMux polls Telegram; Home Assistant polls BotMux (/tgapi).
+set -euo pipefail
+
+CONFIG_PATH="/data/options.json"
+STATE_FILE="/config/botmux/ha_integration.state.json"
+
+PORT="$(jq --raw-output '.port // 8080' "${CONFIG_PATH}")"
+BOTMUX_INTERNAL_PORT=8090
+DB_PATH="$(jq --raw-output '.db_path // "/config/botmux/botdata.db"' "${CONFIG_PATH}")"
+AUTO="$(jq --raw-output '.homeassistant_auto_configure // true' "${CONFIG_PATH}")"
+
+# shellcheck source=/usr/local/bin/botmux-resolve-token.sh
+source /usr/local/bin/botmux-resolve-token.sh
+
+ADDON_HOST="$(bashio::addon.hostname 2>/dev/null || true)"
+if [[ -z "${ADDON_HOST}" ]]; then
+  ADDON_HOST="$(bashio::addon.slug 2>/dev/null || echo "botmux")"
+fi
+API_ENDPOINT="http://${ADDON_HOST}:${PORT}/tgapi"
+export BOTMUX_ALLOW_AUTO_REGISTER=1
+
+ha_api() {
+  botmux_ha_api "$@"
+}
+
+wait_for_homeassistant() {
+  local attempt
+  for attempt in $(seq 1 120); do
+    if botmux_ha_api GET "/config/config_entries/entry" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 5
+  done
+  return 1
+}
+
+resolve_token() {
+  if botmux_resolve_telegram_token "${CONFIG_PATH}" 1; then
+    return 0
+  fi
+  if ! wait_for_homeassistant; then
+    return 1
+  fi
+  botmux_resolve_telegram_token "${CONFIG_PATH}" 24
+}
+
+wait_for_botmux() {
+  local attempt
+  for attempt in $(seq 1 90); do
+    if curl -fsS "http://127.0.0.1:${BOTMUX_INTERNAL_PORT}/api/health" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+state_matches() {
+  if [[ ! -f "${STATE_FILE}" ]]; then
+    return 1
+  fi
+  local saved_endpoint saved_token entry_id
+  saved_endpoint="$(jq -r '.api_endpoint // empty' "${STATE_FILE}")"
+  saved_token="$(jq -r '.token // empty' "${STATE_FILE}")"
+  [[ "${saved_endpoint}" == "${API_ENDPOINT}" && "${saved_token}" == "${TOKEN}" ]] || return 1
+  entry_id="$(find_telegram_entry_id || true)"
+  [[ -n "${entry_id}" ]] || return 1
+  ! entry_needs_update "${entry_id}"
+}
+
+save_state() {
+  local entry_id=${1:-}
+  mkdir -p "$(dirname "${STATE_FILE}")"
+  jq -n \
+    --arg token "${TOKEN}" \
+    --arg api_endpoint "${API_ENDPOINT}" \
+    --arg platform "polling" \
+    --arg entry_id "${entry_id}" \
+    '{token: $token, api_endpoint: $api_endpoint, platform: $platform, entry_id: $entry_id, configured_at: (now | todate)}' \
+    > "${STATE_FILE}"
+}
+
+clear_telegram_webhook() {
+  curl -fsS "http://127.0.0.1:${BOTMUX_INTERNAL_PORT}/tgapi/bot${TOKEN}/deleteWebhook?drop_pending_updates=false" \
+    >/dev/null 2>&1 || true
+}
+
+configure_botmux_polling() {
+  if [[ ! -f "${DB_PATH}" ]]; then
+    bashio::log.warning "BotMux database not ready yet"
+    return 1
+  fi
+
+  local botmux_id token_sql long_poll proxy_enabled
+  token_sql="${TOKEN//\'/\'\'}"
+  botmux_id="$(sqlite3 "${DB_PATH}" "SELECT id FROM bots WHERE token = '${token_sql}' LIMIT 1;")"
+  if [[ -z "${botmux_id}" ]]; then
+    botmux_id="$(sqlite3 "${DB_PATH}" "SELECT id FROM bots ORDER BY id LIMIT 1;")"
+  fi
+  if [[ -z "${botmux_id}" ]]; then
+    bashio::log.warning "BotMux bot row not found for token"
+    return 1
+  fi
+
+  long_poll="$(sqlite3 "${DB_PATH}" "SELECT long_poll_enabled FROM bots WHERE id = ${botmux_id};")"
+  proxy_enabled="$(sqlite3 "${DB_PATH}" "SELECT proxy_enabled FROM bots WHERE id = ${botmux_id};")"
+
+  if [[ "${long_poll}" == "1" && "${proxy_enabled}" == "0" ]]; then
+    bashio::log.info "BotMux bot id=${botmux_id}: already in long poll mode"
+    clear_telegram_webhook
+    return 0
+  fi
+
+  sqlite3 "${DB_PATH}" \
+    "UPDATE bots SET proxy_enabled = 0, backend_url = '', secret_token = '', long_poll_enabled = 1 WHERE id = ${botmux_id};"
+
+  clear_telegram_webhook
+
+  bashio::log.info "BotMux bot id=${botmux_id}: long poll enabled, proxy disabled"
+
+  if [[ -d /run/service/botmux ]]; then
+    s6-svc -r /run/service/botmux
+    wait_for_botmux || return 1
+  fi
+  return 0
+}
+
+find_telegram_entry_id() {
+  local storage entry_id entries count
+
+  storage="$(ha_config_entries_storage || true)"
+  if [[ -n "${storage}" && -f "${storage}" ]]; then
+    entry_id="$(jq -r --arg token "${TOKEN}" \
+      '.data.entries[] | select(.domain == "telegram_bot" and (.unique_id == $token or .data.api_key == $token)) | .entry_id' \
+      "${storage}" 2>/dev/null | head -1)"
+    if [[ -n "${entry_id}" && "${entry_id}" != "null" ]]; then
+      echo "${entry_id}"
+      return 0
+    fi
+  fi
+
+  if ! entries="$(ha_api GET "/config/config_entries/entry" 2>/dev/null)"; then
+    return 0
+  fi
+
+  count="$(jq '[.[] | select(.domain == "telegram_bot")] | length' <<< "${entries}")"
+  if [[ "${count}" -eq 0 ]]; then
+    return 0
+  fi
+
+  entry_id="$(jq -r --arg token "${TOKEN}" \
+    '[.[] | select(.domain == "telegram_bot" and .unique_id == $token)][0].entry_id // empty' \
+    <<< "${entries}")"
+  if [[ -n "${entry_id}" ]]; then
+    echo "${entry_id}"
+    return 0
+  fi
+
+  if [[ "${count}" -eq 1 ]]; then
+    jq -r '[.[] | select(.domain == "telegram_bot")][0].entry_id' <<< "${entries}"
+    return 0
+  fi
+
+  bashio::log.warning "Several telegram_bot entries found; using the first one"
+  jq -r '[.[] | select(.domain == "telegram_bot")][0].entry_id' <<< "${entries}"
+}
+
+HA_OFFICIAL_API_ENDPOINT="https://api.telegram.org"
+
+ha_config_entries_storage() {
+  local path
+  for path in \
+    "/homeassistant/.storage/core.config_entries" \
+    "/config/.storage/core.config_entries"; do
+    if [[ -f "${path}" && -r "${path}" ]]; then
+      printf '%s' "${path}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+entry_needs_update() {
+  local entry_id=$1
+  local storage platform endpoint
+
+  storage="$(ha_config_entries_storage || true)"
+  if [[ -n "${storage}" && -f "${storage}" ]]; then
+    platform="$(jq -r --arg id "${entry_id}" '.data.entries[] | select(.entry_id == $id) | .data.platform // empty' "${storage}")"
+    endpoint="$(jq -r --arg id "${entry_id}" '.data.entries[] | select(.entry_id == $id) | .data.api_endpoint // empty' "${storage}")"
+  else
+    platform="$(get_entry_from_api "${entry_id}" '.data.platform // empty')"
+    endpoint="$(get_entry_from_api "${entry_id}" '.data.api_endpoint // empty')"
+  fi
+  [[ "${platform}" != "polling" || "${endpoint}" != "${API_ENDPOINT}" ]]
+}
+
+get_entry_api_endpoint() {
+  local entry_id=$1
+  local storage
+
+  storage="$(ha_config_entries_storage || true)"
+  if [[ -n "${storage}" && -f "${storage}" ]]; then
+    jq -r --arg id "${entry_id}" \
+      '.data.entries[] | select(.entry_id == $id) | .data.api_endpoint // empty' \
+      "${storage}" 2>/dev/null | head -1
+    return 0
+  fi
+  ha_api GET "/config/config_entries/entry" 2>/dev/null \
+    | jq -r --arg id "${entry_id}" '[.[] | select(.entry_id == $id)][0].data.api_endpoint // empty'
+}
+
+entry_uses_official_telegram_api() {
+  local endpoint=$1
+  [[ -z "${endpoint}" || "${endpoint}" == "${HA_OFFICIAL_API_ENDPOINT}" ]]
+}
+
+# HA config flow calls bot.log_out() only when reconfiguring api.telegram.org → custom
+# endpoint while the entry is LOADED. Disable first (unload), then reconfigure.
+get_entry_from_api() {
+  local entry_id=$1
+  local jq_expr=$2
+  ha_api GET "/config/config_entries/entry" 2>/dev/null \
+    | jq -r --arg id "${entry_id}" "[.[] | select(.entry_id == \$id)][0] | ${jq_expr}"
+}
+
+get_entry_state() {
+  local entry_id=$1
+  get_entry_from_api "${entry_id}" '.state // "unknown"'
+}
+
+get_entry_disabled_by() {
+  local entry_id=$1
+  get_entry_from_api "${entry_id}" '.disabled_by // empty'
+}
+
+wait_for_entry_unloaded() {
+  local entry_id=$1
+  local attempt state
+  for attempt in $(seq 1 60); do
+    state="$(get_entry_state "${entry_id}")"
+    if [[ "${state}" != "loaded" ]]; then
+      return 0
+    fi
+    sleep 2
+  done
+  bashio::log.warning "telegram_bot entry ${entry_id} still loaded after disable"
+  return 1
+}
+
+disable_telegram_entry() {
+  local entry_id=$1
+  bashio::log.info "Disabling Home Assistant telegram_bot entry ${entry_id} before endpoint change"
+  if ! python3 /usr/local/bin/botmux-ha-ws.py disable "${entry_id}"; then
+    bashio::log.error "Could not disable telegram_bot via Home Assistant WebSocket"
+    return 1
+  fi
+  wait_for_entry_unloaded "${entry_id}"
+}
+
+enable_telegram_entry() {
+  local entry_id=$1
+  bashio::log.info "Re-enabling Home Assistant telegram_bot entry ${entry_id}"
+  if ! python3 /usr/local/bin/botmux-ha-ws.py enable "${entry_id}"; then
+    bashio::log.error "Could not re-enable telegram_bot via Home Assistant WebSocket"
+    return 1
+  fi
+}
+
+flow_post() {
+  local flow_id=$1
+  local body=$2
+  ha_api POST "/config/config_entries/flow/${flow_id}" "${body}"
+}
+
+user_step_payload() {
+  jq -n \
+    --arg platform "polling" \
+    --arg api_key "${TOKEN}" \
+    --arg api_endpoint "${API_ENDPOINT}" \
+    '{
+      platform: $platform,
+      api_key: $api_key,
+      advanced_settings: {
+        api_endpoint: $api_endpoint
+      }
+    }'
+}
+
+reconfigure_step_payload() {
+  jq -n \
+    --arg platform "polling" \
+    --arg api_endpoint "${API_ENDPOINT}" \
+    '{
+      platform: $platform,
+      advanced_settings: {
+        api_endpoint: $api_endpoint
+      }
+    }'
+}
+
+handle_flow_result() {
+  local result=$1
+  local flow_id=$2
+  local type step_id
+
+  type="$(jq -r '.type' <<< "${result}")"
+  step_id="$(jq -r '.step_id // empty' <<< "${result}")"
+
+  case "${type}" in
+    create_entry)
+      local entry_id
+      entry_id="$(jq -r '.result.entry_id // empty' <<< "${result}")"
+      bashio::log.info "Home Assistant telegram_bot configured (entry ${entry_id})"
+      if [[ -n "${entry_id}" ]]; then
+        ha_api POST "/config/config_entries/entry/${entry_id}/reload" "{}" >/dev/null 2>&1 || true
+      fi
+      save_state "${entry_id}"
+      python3 /usr/local/bin/botmux-ha-ws.py clear-flows 2>/dev/null || true
+      return 0
+      ;;
+    abort)
+      local reason entry_id
+      reason="$(jq -r '.reason // "unknown"' <<< "${result}")"
+      entry_id="$(find_telegram_entry_id || true)"
+      if [[ "${reason}" == "already_configured" ]]; then
+        save_state "${entry_id}"
+        python3 /usr/local/bin/botmux-ha-ws.py clear-flows 2>/dev/null || true
+        bashio::log.info "Home Assistant telegram_bot already registered for this token"
+        return 0
+      fi
+      if [[ "${reason}" == "reconfigure_successful" ]]; then
+        bashio::log.info "Home Assistant telegram_bot reconfigured (entry ${entry_id})"
+        save_state "${entry_id}"
+        python3 /usr/local/bin/botmux-ha-ws.py clear-flows 2>/dev/null || true
+        return 0
+      fi
+      bashio::log.warning "Home Assistant config flow aborted: ${reason}"
+      return 1
+      ;;
+    form)
+      local errors payload
+      errors="$(jq -c '.errors // empty' <<< "${result}")"
+      if [[ -n "${errors}" && "${errors}" != "null" && "${errors}" != "{}" ]]; then
+        bashio::log.error "Home Assistant config flow validation failed: ${errors}"
+        return 1
+      fi
+      if [[ "${step_id}" == "user" ]]; then
+        payload="$(user_step_payload)"
+      elif [[ "${step_id}" == "reconfigure" ]]; then
+        payload="$(reconfigure_step_payload)"
+      else
+        bashio::log.warning "Unexpected config flow step: ${step_id}"
+        return 1
+      fi
+      result="$(flow_post "${flow_id}" "${payload}")"
+      handle_flow_result "${result}" "${flow_id}"
+      ;;
+    *)
+      bashio::log.warning "Unexpected config flow type: ${type}"
+      return 1
+      ;;
+  esac
+}
+
+abort_stale_telegram_flows() {
+  local output count
+  if ! output="$(python3 /usr/local/bin/botmux-ha-ws.py abort-flows telegram_bot 2>&1)"; then
+    bashio::log.warning "Could not abort stale telegram_bot flows: ${output}"
+    return 0
+  fi
+  count="${output##*$'\n'}"
+  if [[ "${count}" =~ ^[0-9]+$ && "${count}" -gt 0 ]]; then
+    bashio::log.info "Aborted ${count} stale telegram_bot config flow(s)"
+  fi
+}
+
+start_telegram_config_flow() {
+  local payload=$1
+  local flow_init flow_id type reason
+
+  abort_stale_telegram_flows
+  flow_init="$(ha_api POST "/config/config_entries/flow" "${payload}")"
+  type="$(jq -r '.type' <<< "${flow_init}")"
+  reason="$(jq -r '.reason // empty' <<< "${flow_init}")"
+
+  if [[ "${type}" == "abort" && "${reason}" == "already_in_progress" ]]; then
+    bashio::log.warning \
+      "Stale telegram_bot config flow in Home Assistant memory (not visible in UI); clearing tracked flows and retrying"
+    abort_stale_telegram_flows
+    sleep 2
+    flow_init="$(ha_api POST "/config/config_entries/flow" "${payload}")"
+  fi
+
+  flow_id="$(jq -r '.flow_id // empty' <<< "${flow_init}")"
+  if [[ -n "${flow_id}" && "${flow_id}" != "null" ]]; then
+    python3 /usr/local/bin/botmux-ha-ws.py track-flow "${flow_id}" 2>/dev/null || true
+  fi
+
+  printf '%s' "${flow_init}"
+}
+
+configure_homeassistant_integration() {
+  local entry_id flow_init flow_id result
+  local need_disable=false
+
+  entry_id="$(find_telegram_entry_id || true)"
+
+  if [[ -n "${entry_id}" ]] && ! entry_needs_update "${entry_id}"; then
+    bashio::log.info "Home Assistant telegram_bot already uses polling via ${API_ENDPOINT}"
+    save_state "${entry_id}"
+    return 0
+  fi
+
+  if [[ -n "${entry_id}" ]]; then
+    local current_endpoint entry_state
+    current_endpoint="$(get_entry_api_endpoint "${entry_id}")"
+    entry_state="$(get_entry_state "${entry_id}")"
+    if entry_uses_official_telegram_api "${current_endpoint}"; then
+      need_disable=true
+    fi
+    if [[ "${need_disable}" == "true" && "${entry_state}" == "loaded" ]]; then
+      if ! disable_telegram_entry "${entry_id}"; then
+        return 1
+      fi
+    elif [[ "${entry_state}" == "not_loaded" && "$(get_entry_disabled_by "${entry_id}")" == "user" ]]; then
+      bashio::log.info "Home Assistant telegram_bot already disabled; proceeding with reconfigure"
+    fi
+    bashio::log.info "Reconfiguring Home Assistant telegram_bot entry ${entry_id} to polling"
+    flow_init="$(start_telegram_config_flow \
+      "$(jq -n --arg e "${entry_id}" '{handler: "telegram_bot", entry_id: $e}')")"
+  else
+    bashio::log.info "Creating Home Assistant telegram_bot integration (polling)"
+    flow_init="$(start_telegram_config_flow '{"handler":"telegram_bot"}')"
+  fi
+
+  flow_id="$(jq -r '.flow_id // empty' <<< "${flow_init}")"
+  if [[ -z "${flow_id}" ]]; then
+    bashio::log.error "Could not start telegram_bot config flow"
+    return 1
+  fi
+
+  type="$(jq -r '.type' <<< "${flow_init}")"
+  if [[ "${type}" == "form" ]]; then
+    step_id="$(jq -r '.step_id' <<< "${flow_init}")"
+    if [[ "${step_id}" == "user" ]]; then
+      result="$(flow_post "${flow_id}" "$(user_step_payload)")"
+    elif [[ "${step_id}" == "reconfigure" ]]; then
+      result="$(flow_post "${flow_id}" "$(reconfigure_step_payload)")"
+    else
+      bashio::log.warning "Unexpected initial step: ${step_id}"
+      return 1
+    fi
+    handle_flow_result "${result}" "${flow_id}" || return 1
+  else
+    handle_flow_result "${flow_init}" "${flow_id}" || return 1
+  fi
+
+  if [[ "${need_disable}" == "true" && -n "${entry_id}" ]]; then
+    enable_telegram_entry "${entry_id}" || return 1
+  fi
+
+  python3 /usr/local/bin/botmux-ha-ws.py clear-flows 2>/dev/null || true
+}
+
+prepare_before_poll() {
+  if [[ "${AUTO}" != "true" ]]; then
+    return 0
+  fi
+  if ! resolve_token; then
+    return 0
+  fi
+  wait_for_homeassistant || return 0
+
+  local entry_id endpoint entry_state
+  entry_id="$(find_telegram_entry_id || true)"
+  [[ -n "${entry_id}" ]] || return 0
+
+  endpoint="$(get_entry_api_endpoint "${entry_id}")"
+  entry_state="$(get_entry_state "${entry_id}")"
+  if entry_uses_official_telegram_api "${endpoint}" && [[ "${entry_state}" == "loaded" ]]; then
+    bashio::log.info "Pausing Home Assistant direct Telegram polling before BotMux starts"
+    disable_telegram_entry "${entry_id}" || true
+  fi
+}
+
+main() {
+  if [[ "${AUTO}" != "true" ]]; then
+    return 0
+  fi
+
+  if ! resolve_token; then
+    bashio::log.warning "homeassistant_auto_configure: no token (add-on option or telegram_bot in HA)"
+    return 1
+  fi
+
+  if [[ -n "${TOKEN}" && -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
+    export TELEGRAM_BOT_TOKEN="${TOKEN}"
+  fi
+
+  if state_matches; then
+    bashio::log.info "Home Assistant integration already configured (${API_ENDPOINT})"
+    exit 0
+  fi
+
+  if ! wait_for_botmux; then
+    bashio::log.error "BotMux did not become healthy"
+    exit 1
+  fi
+
+  if ! configure_botmux_polling; then
+    exit 1
+  fi
+
+  if ! configure_homeassistant_integration; then
+    exit 1
+  fi
+}
+
+case "${1:-}" in
+  prepare-before-poll)
+    prepare_before_poll
+    ;;
+  *)
+    main "$@"
+    ;;
+esac

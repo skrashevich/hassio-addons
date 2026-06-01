@@ -1,0 +1,21 @@
+#!/usr/bin/with-contenv bashio
+# Wait for BotMux DB, register ingress SSO key once, then idle.
+set -euo pipefail
+
+CONFIG_PATH="/data/options.json"
+DB_PATH="$(jq --raw-output '.db_path // "/config/botmux/botdata.db"' "${CONFIG_PATH}")"
+
+for _ in $(seq 1 120); do
+  if /usr/local/bin/botmux-ensure-ingress-api-key.sh; then
+    if sqlite3 "${DB_PATH}" "SELECT 1 FROM api_keys WHERE name='home-assistant-ingress' LIMIT 1;" 2>/dev/null | grep -q 1; then
+      break
+    fi
+  fi
+  sleep 1
+done
+
+if ! sqlite3 "${DB_PATH}" "SELECT 1 FROM api_keys WHERE name='home-assistant-ingress' LIMIT 1;" 2>/dev/null | grep -q 1; then
+  bashio::log.warning "Timed out waiting to register ingress SSO API key"
+fi
+
+exec sleep infinity
