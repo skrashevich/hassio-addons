@@ -1,5 +1,5 @@
 name: BotMux
-version: 0.1.12
+version: 0.2.0
 slug: botmux
 description: Telegram bot command center with reverse proxy for Home Assistant
 url: https://github.com/skrashevich/botmux
