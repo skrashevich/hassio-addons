@@ -25,6 +25,7 @@ ports_description:
 map:
   - media:rw
   - config:rw
+  - share:rw
 environment:
   HA_ADDON: "true"
 options:
